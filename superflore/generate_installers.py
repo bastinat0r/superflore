@@ -38,7 +38,12 @@ def generate_installers(
     bad_installers = []
     succeeded = 0
     failed = 0
-    what_generating = 'recipe' if kwargs.get('is_oe', False) else 'ebuild'
+    what_generating = 'ebuild'
+    if kwargs.get('is_oe', False):
+        what_generating = 'recipe'
+    if kwargs.get('is_aur', False):
+        what_generating = 'pkgbuild'
+    #what_generating = 'recipe' if kwargs.get('is_oe', False) else 'ebuild'
 
     info("Generating %ss for distro '%s'" % (what_generating, distro_name))
     for i, pkg in enumerate(sorted(pkg_names[0])):
