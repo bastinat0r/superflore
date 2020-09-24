@@ -144,7 +144,7 @@ class PkgBuild(object):
             sanitize_string(self.description, self.illegal_desc_chars)
         self.description = trim_string(self.description)
 
-        entries.append(f"pkgname='{self.name}'")
+        entries.append(f"pkgname='ros-{self.distro}-{self.name}'")
         entries.append(f'pkgdesc="{self.description}"')
         entries.append(f"url={self.homepage}")
         version_str = self.version.split("-")[0]
@@ -156,36 +156,41 @@ class PkgBuild(object):
         entries.append(f"license=({' '.join(license_str)})")
         entries.append(f"epoch=0")
         entries.append(f"groups=('ros' 'ros-{self.distro}')")
-        dependencies = (self.depends + self.depends_external)
+        ros_deps = [f"ros-{self.distro}-{d}" for d in self.depends]
+        dependencies = (ros_deps + self.depends_external)
         for i, dep in enumerate(dependencies):
             if dep.startswith("python3"):
                 dependencies[i] = dep.replace("python3", "python", 1)
         entries.append(f"makedepends=({' '.join(dependencies)})")
-        rdependencies = (self.rdepends + self.rdepends_external)
+        ros_rdeps = [f"ros-{self.distro}-{d}" for d in self.rdepends] 
+        rdependencies = (ros_rdeps + self.rdepends_external)
         for i, dep in enumerate(rdependencies):
             if dep.startswith("python3"):
                 rdependencies[i] = dep.replace("python3", "python", 1)
         entries.append(f"depends=({' '.join(rdependencies)})")
         entries.append(f'source=("ros-{self.distro}-{self.name}-{self.version}.tar.gz::{self.src_uri}")')
         entries.append(f"md5sums=('SKIP')")
-        entries.append("""
-prepare() {
-    cd "${srcdir}"
-}
-""")
-        entries.append("""
-build() {
-    cd "${srcdir}"
+        entries.append(f"""
+build() {{
+    cd "${{srcdir}}"
+    [ -f /opt/ros/{self.distro}/setup.bash ] && source /opt/ros/{self.distro}/setup.bash
     colcon build
-}
+}}
 """)
 
-        entries.append("""
-package() {
-    cd "${srcdir}"
-}
+        entries.append(f"""
+package() {{
+    cd "${{srcdir}}"
+    colcon build --install-base "${{pkgdir}}"/opt/ros/{self.distro}
+    rm "${{pkgdir}}"/opt/ros/{self.distro}/*setup*
+    rm "${{pkgdir}}"/opt/ros/{self.distro}/COLCON_IGNORE
+    rm "${{pkgdir}}"/opt/ros/{self.distro}/.colcon_install_layout
+    chown -R ros:ros "${{pkgdir}}"/opt/ros/{self.distro}
+    chmod -R 777 "${{pkgdir}}"/opt/ros/{self.distro}
+}}
 """)
         return "\n".join(entries)
 
     def get_unresolved(self):
         return self.unresolved_deps
+ 

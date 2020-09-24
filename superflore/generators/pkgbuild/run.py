@@ -85,7 +85,7 @@ def main():
         # clone if args.output_repository_path is None
         overlay = RosOverlay(
             _repo,
-            not args.output_repository_path,
+            False,
             org=repo_org,
             repo=repo_name,
             from_branch=args.upstream_branch,
